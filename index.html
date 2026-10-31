@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Estrelas no Notion</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      min-height: 220px;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="starsCanvas" aria-hidden="true"></canvas>
+  <script>
+    (() => {
+      const canvas = document.getElementById('starsCanvas');
+      const ctx = canvas.getContext('2d');
+      const stars = [];
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const count = 40;
+      let width = 0;
+      let height = 0;
+      let frame = 0;
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = Math.max(1, rect.width);
+        height = Math.max(220, rect.height);
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        draw();
+      }
+
+      function newStar(randomX = false) {
+        return {
+          x: randomX ? Math.random() * width : -10,
+          y: Math.random() * height,
+          size: Math.random() * 2 + 1,
+          speed: Math.random() * 1.5 + 0.5,
+          alpha: Math.random() * 0.5 + 0.5,
+          fadeSpeed: Math.random() * 0.02 + 0.01,
+          growing: Math.random() > 0.5
+        };
+      }
+
+      function drawStar(star) {
+        ctx.save();
+        ctx.globalAlpha = star.alpha;
+        ctx.fillStyle = '#ff69b4';
+        ctx.fillRect(star.x - star.size * 2, star.y, star.size * 4, 1);
+        ctx.fillRect(star.x, star.y - star.size * 2, 1, star.size * 4);
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, width, height);
+        for (const star of stars) drawStar(star);
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, width, height);
+        for (let i = 0; i < stars.length; i++) {
+          const star = stars[i];
+          star.x += star.speed;
+          if (star.growing) {
+            star.alpha += star.fadeSpeed;
+            if (star.alpha >= 1) star.growing = false;
+          } else {
+            star.alpha -= star.fadeSpeed;
+            if (star.alpha <= 0.2) star.growing = true;
+          }
+          if (star.x > width) stars[i] = newStar();
+          drawStar(stars[i]);
+        }
+        frame = window.requestAnimationFrame(animate);
+      }
+
+      window.addEventListener('resize', resizeCanvas, { passive: true });
+      resizeCanvas();
+      for (let i = 0; i < count; i++) stars.push(newStar(true));
+      draw();
+      if (!reducedMotion) frame = window.requestAnimationFrame(animate);
+      window.addEventListener('pagehide', () => window.cancelAnimationFrame(frame), { once: true });
+    })();
+  </script>
+</body>
+</html>
